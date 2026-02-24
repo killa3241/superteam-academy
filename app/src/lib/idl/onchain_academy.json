@@ -1,0 +1,102 @@
+{
+  "version": "0.1.0",
+  "name": "onchain_academy",
+  "address": "ACADBRCB3zGvo1KSCbkztS33ZNzeBv2d7bqGceti3ucf",
+  "instructions": [
+    {
+      "name": "enroll",
+      "accounts": [
+        { "name": "course", "isMut": true, "isSigner": false },
+        { "name": "enrollment", "isMut": true, "isSigner": true },
+        { "name": "learner", "isMut": true, "isSigner": true },
+        { "name": "systemProgram", "isMut": false, "isSigner": false }
+      ],
+      "args": [{ "name": "courseId", "type": "string" }]
+    },
+    {
+      "name": "completeLesson",
+      "accounts": [
+        { "name": "course", "isMut": true, "isSigner": false },
+        { "name": "enrollment", "isMut": true, "isSigner": false },
+        { "name": "learner", "isMut": false, "isSigner": true },
+        { "name": "minterRole", "isMut": true, "isSigner": false },
+        { "name": "xpMint", "isMut": false, "isSigner": false },
+        { "name": "learnerXpAccount", "isMut": true, "isSigner": false },
+        { "name": "tokenProgram", "isMut": false, "isSigner": false }
+      ],
+      "args": [
+        { "name": "courseId", "type": "string" },
+        { "name": "lessonIndex", "type": "u8" }
+      ]
+    },
+    {
+      "name": "issueCredential",
+      "accounts": [
+        { "name": "enrollment", "isMut": true, "isSigner": false },
+        { "name": "learner", "isMut": false, "isSigner": true },
+        { "name": "minterRole", "isMut": true, "isSigner": false },
+        { "name": "mplCoreProgram", "isMut": false, "isSigner": false },
+        { "name": "collection", "isMut": true, "isSigner": false },
+        { "name": "credentialAsset", "isMut": true, "isSigner": true },
+        { "name": "systemProgram", "isMut": false, "isSigner": false }
+      ],
+      "args": [{ "name": "courseId", "type": "string" }]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "course",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          { "name": "courseId", "type": "string" },
+          { "name": "creator", "type": "publicKey" },
+          { "name": "contentTxId", "type": { "array": ["u8", 32] } },
+          { "name": "version", "type": "u8" },
+          { "name": "lessonCount", "type": "u8" },
+          { "name": "difficulty", "type": "u8" },
+          { "name": "xpPerLesson", "type": "u32" },
+          { "name": "trackId", "type": "u16" },
+          { "name": "trackLevel", "type": "u8" },
+          { "name": "prerequisite", "type": { "option": "publicKey" } },
+          { "name": "creatorRewardXp", "type": "u32" },
+          { "name": "minCompletionsForReward", "type": "u32" },
+          { "name": "totalCompletions", "type": "u32" },
+          { "name": "totalEnrollments", "type": "u32" },
+          { "name": "isActive", "type": "bool" },
+          { "name": "createdAt", "type": "i64" },
+          { "name": "updatedAt", "type": "i64" }
+        ]
+      }
+    },
+    {
+      "name": "enrollment",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          { "name": "course", "type": "publicKey" },
+          { "name": "enrolledAt", "type": "i64" },
+          { "name": "completedAt", "type": { "option": "i64" } },
+          { "name": "lessonFlags", "type": { "array": ["u64", 4] } },
+          { "name": "credentialAsset", "type": { "option": "publicKey" } },
+          { "name": "_reserved", "type": { "array": ["u8", 4] } },
+          { "name": "bump", "type": "u8" }
+        ]
+      }
+    },
+    {
+      "name": "config",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          { "name": "authority", "type": "publicKey" },
+          { "name": "backendSigner", "type": "publicKey" },
+          { "name": "xpMint", "type": "publicKey" },
+          { "name": "_reserved", "type": { "array": ["u8", 8] } },
+          { "name": "bump", "type": "u8" }
+        ]
+      }
+    }
+  ],
+  "types": []
+}
