@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { useLearningProgressService } from "@/services/LearningProgressService";
-import { XPCalculator, LessonBitmap } from "@/services/LearningProgressService";
+import { LessonBitmap } from "@/lib/utils/lesson-bitmap";
 import { CourseList } from "./CourseList";
 
 interface CourseCardProps {
@@ -24,7 +24,7 @@ function CourseCard({ course, enrollment, onEnroll }: CourseCardProps) {
     ? LessonBitmap.countCompletedLessons(enrollment.lessonFlags)
     : 0;
 
-  const isCompleted = enrollment?.completedAt !== null;
+  const isCompleted = !!enrollment?.completedAt;
 
   return (
     <Card className="w-full">
@@ -92,8 +92,10 @@ export function CourseCatalog() {
   const learningService = useLearningProgressService();
 
   useEffect(() => {
-    loadData();
-  }, []);
+    if (learningService) {
+      loadData();
+    }
+  }, [learningService]);
 
   const loadData = async () => {
     if (!learningService) {
@@ -154,7 +156,20 @@ export function CourseCatalog() {
 
   return (
     <div className="space-y-6">
-      <CourseList />
+      {courses.map((course) => {
+        const enrollment = userProgress.find(
+          (p) => p.course.courseId === course.courseId
+        )?.enrollment;
+
+        return (
+          <CourseCard
+            key={course.courseId}
+            course={course}
+            enrollment={enrollment}
+            onEnroll={handleEnroll}
+          />
+        );
+      })}
     </div>
   );
 }

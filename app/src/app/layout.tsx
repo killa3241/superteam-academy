@@ -2,7 +2,12 @@ import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
 import { SolanaProviders } from "@/components/SolanaProviders";
+import dynamic from "next/dynamic";
 
+const Header = dynamic(
+  () => import("@/components/layout/Header").then(mod => mod.Header),
+  { ssr: false }
+);
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
   variable: "--font-geist-sans",
@@ -30,8 +35,11 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <SolanaProviders>
+        <Header />
+        <main className="min-h-screen">
           {children}
-        </SolanaProviders>
+        </main>
+      </SolanaProviders>
       </body>
     </html>
   );

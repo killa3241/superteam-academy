@@ -5,20 +5,35 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useLearningProgressService } from "@/services/LearningProgressService";
+import { useWallet } from "@solana/wallet-adapter-react";
 import { Loader2 } from "lucide-react";
 
+type Course = {
+    courseId: string;
+    lessonCount: number;
+    difficulty: number;
+    xpPerLesson: number;
+    trackId: number;
+    trackLevel: number;
+    prerequisite: string | null;
+    isActive: boolean;
+  };
+
 export function CourseList() {
-  const [courses, setCourses] = useState<any[]>([]);
+    
+  const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const { connected } = useWallet();
   const learningService = useLearningProgressService();
 
   useEffect(() => {
     const loadCourses = async () => {
+      
       if (!learningService) {
-        setError("Wallet must be connected to fetch courses");
         setLoading(false);
+        setCourses([]);
         return;
       }
 
@@ -26,7 +41,6 @@ export function CourseList() {
         setLoading(true);
         setError(null);
         const fetchedCourses = await learningService.getAllCourses();
-        console.log("Courses fetched:", fetchedCourses);
         setCourses(fetchedCourses);
       } catch (err) {
         console.error("Error fetching courses:", err);
@@ -39,11 +53,27 @@ export function CourseList() {
     loadCourses();
   }, [learningService]);
 
+  if (!connected) {
+    return (
+      <div className="flex justify-center items-center py-12">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle>Please connect your wallet</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-gray-600">
+              Connect your Phantom wallet to fetch available courses from Devnet.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   if (loading) {
     return (
       <div className="flex justify-center items-center py-12">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
-        <Loader2 className="ml-2 h-6 w-6 text-indigo-600" />
+        <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
         <span className="text-lg font-medium text-gray-700">Loading courses...</span>
       </div>
     );
@@ -91,64 +121,61 @@ export function CourseList() {
       </div>
       
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {courses.map((course, index) => {
-          // Debug logging to understand data structure
-          console.log(`Course ${index}:`, course);
-          console.log(`Course ${index} keys:`, Object.keys(course));
-          
-          // Safety check - ensure course exists and has required properties
-          if (!course) {
-            console.warn(`Course ${index} is undefined or null`);
-            return null;
-          }
-          
-          // Safety check - ensure required properties exist
-          const requiredProps = ['courseId', 'lessonCount', 'xpPerLesson', 'isActive'];
-          const missingProps = requiredProps.filter(prop => !(prop in course));
-          if (missingProps.length > 0) {
-            console.warn(`Course ${index} missing properties:`, missingProps);
-          }
-          
-          return (
-            <Card key={index} className="hover:shadow-lg transition-shadow">
+        {courses.map((course) => (
+            <Card
+              key={course.courseId}
+              className="hover:shadow-lg transition-shadow"
+            >
               <CardHeader>
                 <div className="flex justify-between items-start">
                   <CardTitle className="text-lg">
-                    {course.courseId || 'Unknown Course'}
+                    {course.courseId}
                   </CardTitle>
-                  <Badge 
-                    variant={(course.courseId && course.isActive !== false) ? "default" : "secondary"}
-                    className={(course.courseId && course.isActive !== false) ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}
+                  <Badge
+                    variant={course.isActive ? "default" : "secondary"}
+                    className={
+                      course.isActive
+                        ? "bg-green-100 text-green-800"
+                        : "bg-gray-100 text-gray-800"
+                    }
                   >
-                    {course.isActive !== false ? "Active" : "Inactive"}
+                    {course.isActive ? "Active" : "Inactive"}
                   </Badge>
                 </div>
               </CardHeader>
+
               <CardContent>
                 <CardDescription className="mb-4">
-                  Track ID: {course.contentTxId || 'N/A'}
+                  Track {course.trackId} • Level {course.trackLevel}
                 </CardDescription>
-                
+
                 <div className="space-y-2 text-sm text-gray-600">
-                  <p><strong>Difficulty:</strong> {course.difficulty || 'N/A'}/10</p>
-                  <p><strong>Lessons:</strong> {course.lessonCount || 'N/A'}</p>
-                  <p><strong>XP per Lesson:</strong> {course.xpPerLesson || 'N/A'}</p>
-                  <p><strong>XP per Lesson:</strong> {course.xpPerLesson || 0}</p>
-                  <p><strong>Total XP:</strong> {(course.lessonCount || 0) * (course.xpPerLesson || 0)}</p>
-                  <p><strong>Track:</strong> {course.trackId || 'N/A'} (Level {course.trackLevel || 'N/A'})</p>
+                  <p>
+                    <strong>Difficulty:</strong>{" "}
+                    {"⭐".repeat(course.difficulty || 1)}
+                  </p>
+                  <p>
+                    <strong>Lessons:</strong> {course.lessonCount}
+                  </p>
+                  <p>
+                    <strong>XP per Lesson:</strong> {course.xpPerLesson}
+                  </p>
+                  <p>
+                    <strong>Total XP:</strong>{" "}
+                    {course.lessonCount * course.xpPerLesson}
+                  </p>
                 </div>
 
                 {course.prerequisite && (
                   <div className="mt-4 p-3 bg-yellow-50 rounded border border-yellow-200">
                     <p className="text-sm text-yellow-800">
-                      <strong>Prerequisite Required:</strong> Complete course {course.prerequisite.toString().slice(0, 4)}...{course.prerequisite.toString().slice(-4)}
+                      <strong>Prerequisite Required</strong>
                     </p>
                   </div>
                 )}
               </CardContent>
             </Card>
-          );
-        })}
+          ))}
       </div>
     </div>
   );

@@ -2,7 +2,6 @@
 
 import React, { useState } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
-import { WalletConnection } from "@/components/WalletConnection";
 import { UserProfile } from "@/components/UserProfile";
 import { CourseList } from "@/components/CourseList";
 import { Button } from "@/components/ui/button";
@@ -23,7 +22,7 @@ export default function Home() {
             <p className="text-xl text-gray-600 mb-8">
               Learn & Earn on Solana
             </p>
-            <WalletConnection />
+            
           </header>
 
           <main className="max-w-4xl mx-auto">
@@ -93,7 +92,7 @@ export default function Home() {
               </h1>
               <p className="text-sm text-gray-600">Learn & Earn on Solana</p>
             </div>
-            <WalletConnection />
+            
           </div>
         </div>
       </header>

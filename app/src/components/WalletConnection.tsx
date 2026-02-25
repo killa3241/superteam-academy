@@ -1,31 +1,12 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
-import dynamic from "next/dynamic";
+import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
-const WalletMultiButton = dynamic(
-  () => import("@solana/wallet-adapter-react-ui").then(mod => ({ default: mod.WalletMultiButton })),
-  { ssr: false }
-);
-
 export function WalletConnection() {
   const { connected, publicKey, disconnect } = useWallet();
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  if (!mounted) {
-    return (
-      <div className="flex items-center space-x-4">
-        <div className="w-32 h-10 bg-gray-200 rounded animate-pulse"></div>
-      </div>
-    );
-  }
 
   if (!connected) {
     return (
@@ -35,8 +16,10 @@ export function WalletConnection() {
     );
   }
 
-  const truncatedAddress = publicKey 
-    ? `${publicKey.toString().slice(0, 4)}...${publicKey.toString().slice(-4)}`
+  const truncatedAddress = publicKey
+    ? `${publicKey.toString().slice(0, 4)}...${publicKey
+        .toString()
+        .slice(-4)}`
     : "Unknown";
 
   return (
@@ -47,11 +30,7 @@ export function WalletConnection() {
       <span className="text-sm font-mono text-gray-600">
         {truncatedAddress}
       </span>
-      <Button 
-        variant="outline" 
-        size="sm" 
-        onClick={() => disconnect()}
-      >
+      <Button variant="outline" size="sm" onClick={disconnect}>
         Disconnect
       </Button>
     </div>

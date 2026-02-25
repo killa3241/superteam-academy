@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { useLearningProgressService } from "@/services/LearningProgressService";
-import { XPCalculator } from "@/services/LearningProgressService";
+import { XPCalculator } from "@/lib/utils/xp";
 
 export function UserProfile() {
   const [userXP, setUserXP] = useState<number>(0);
@@ -19,7 +19,7 @@ export function UserProfile() {
 
   useEffect(() => {
     loadUserData();
-  }, []);
+  }, [learningService]);
 
   const loadUserData = async () => {
     if (!learningService) {
@@ -38,8 +38,10 @@ export function UserProfile() {
       
       const level = XPCalculator.calculateLevel(xp);
       const progressToNext = XPCalculator.levelProgress(xp);
-      
-      setUserXP(xp);
+
+      const xpNumber = xp.toNumber();
+
+      setUserXP(xpNumber);
       setUserLevel(level);
       setLevelProgress(progressToNext);
       setUserProgress(progress);
@@ -101,7 +103,7 @@ export function UserProfile() {
               <Progress value={levelProgress} className="w-full" />
             </div>
             <p className="text-xs text-gray-500">
-              {XPCalculator.xpForLevel(userLevel + 1) - userXP} XP to next level
+              {XPCalculator.xpForLevel(userLevel + 1).toNumber() - userXP} XP to next level
             </p>
           </div>
 
