@@ -83,48 +83,22 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="flex justify-between items-center">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">
-          Superteam Academy
-        </h1>
-        <p className="text-sm text-gray-600">Learn & Earn on Solana</p>
-      </div>
-
-      <div className="flex items-center space-x-4">
-        <div className="bg-indigo-50 px-4 py-2 rounded-lg border">
-          {isLoading && <p className="text-sm text-gray-500">Loading XP...</p>}
-
-          {error && (
-            <p className="text-sm text-red-500">
-              Error loading XP
-            </p>
-          )}
-
-          {!isLoading && !error && (
-            <div className="text-sm font-semibold text-indigo-700">
-              XP: {xp ?? 0}
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
+    <div className="min-h-screen bg-background">
+          
 
       <main className="container mx-auto px-4 py-8">
         <div className="mb-8">
-          <nav className="flex space-x-4 border-b">
+          <nav className="flex gap-6 border-b pb-2">
             <Button
               variant={activeTab === "courses" ? "default" : "ghost"}
               onClick={() => setActiveTab("courses")}
-              className="border-b-2 rounded-none"
             >
               Courses
             </Button>
             <Button
               variant={activeTab === "profile" ? "default" : "ghost"}
               onClick={() => setActiveTab("profile")}
-              className="border-b-2 rounded-none"
+              
             >
               My Progress
             </Button>

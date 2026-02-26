@@ -40,76 +40,120 @@ export default function CourseDetailPage() {
     )
   }, [completedLessons, course.lessonCount])
 
-  return (
-    <div className="max-w-5xl mx-auto px-6 py-12 space-y-10">
+return (
+  <div className="max-w-6xl mx-auto px-6 py-14 space-y-12">
 
-      {/* Hero Section */}
-      <div className="space-y-4">
-        <div className="flex items-center gap-3">
-          <h1 className="text-4xl font-bold">{course.title}</h1>
-          <Badge className="bg-indigo-100 text-indigo-800">
-            {course.difficulty}
-          </Badge>
+    {/* Hero Section */}
+    <div className="space-y-6">
+
+      <div className="flex items-center gap-4">
+        <h1 className="text-4xl font-bold tracking-tight">
+          {course.title}
+        </h1>
+
+        <Badge variant="secondary">
+          {course.difficulty}
+        </Badge>
+      </div>
+
+      <p className="text-muted-foreground text-lg max-w-3xl">
+        {course.description}
+      </p>
+
+      <div className="flex gap-10 text-sm text-muted-foreground pt-4 border-t pt-6">
+        <div>
+          <p className="font-medium text-foreground">
+            {course.lessonCount}
+          </p>
+          <p>Lessons</p>
         </div>
 
-        <p className="text-muted-foreground text-lg max-w-2xl">
-          {course.description}
-        </p>
+        <div>
+          <p className="font-medium text-foreground">
+            {totalXP}
+          </p>
+          <p>Total XP</p>
+        </div>
 
-        <div className="flex gap-8 text-sm text-muted-foreground pt-4">
-          <span>Lessons: {course.lessonCount}</span>
-          <span>XP per Lesson: {course.xpPerLesson}</span>
-          <span>Total XP: {totalXP}</span>
+        <div>
+          <p className="font-medium text-foreground">
+            {course.trackLevel}
+          </p>
+          <p>Track Level</p>
         </div>
       </div>
 
-      {/* --- Dynamic Progress --- */}
-      <div className="space-y-2">
-        <div className="flex justify-between text-sm text-muted-foreground">
-          <span>Your Progress</span>
-          <span>{progressPercentage}%</span>
-        </div>
-        <Progress value={progressPercentage} />
+    </div>
+
+    {/* Progress Section */}
+    <div className="rounded-xl border p-6 bg-muted/30 space-y-3">
+
+      <div className="flex justify-between text-sm">
+        <span className="font-medium">Your Progress</span>
+        <span className="text-muted-foreground">
+          {progressPercentage}%
+        </span>
       </div>
 
-      {/* Lessons */}
-      <div className="space-y-4">
-        {course.lessons.map((lesson, index) => {
-          const isCompleted = completedLessons.includes(lesson.id)
+      <Progress value={progressPercentage} />
 
-          return (
-            <div
-              key={lesson.id}
-              className="flex justify-between items-center border rounded-xl p-5 hover:shadow-md transition"
-            >
-              <div className="space-y-1">
-                <p className="font-semibold">
-                  Lesson {index + 1}: {lesson.title}
-                </p>
-                <p className="text-sm text-muted-foreground">
+    </div>
+
+    {/* Lessons List */}
+    <div className="space-y-5">
+      {course.lessons.map((lesson, index) => {
+        const isCompleted = completedLessons.includes(lesson.id)
+
+        return (
+          <div
+            key={lesson.id}
+            className="flex justify-between items-center border rounded-xl px-6 py-5 hover:shadow-md transition-all duration-200"
+          >
+            <div className="space-y-2">
+
+              <p className="text-sm text-muted-foreground">
+                Lesson {index + 1}
+              </p>
+
+              <p className="font-semibold text-lg">
+                {lesson.title}
+              </p>
+
+              <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                <span>
                   {lesson.type === "challenge"
                     ? "🧪 Challenge"
-                    : "📖 Content"}{" "}
-                  • {lesson.xpReward} XP
-                  {isCompleted && (
-                    <span className="ml-2 text-green-600 font-medium">
-                      ✓ Completed
+                    : "📖 Content"}
+                </span>
+
+                <span>•</span>
+
+                <span>{lesson.xpReward} XP</span>
+
+                {isCompleted && (
+                  <>
+                    <span>•</span>
+                    <span className="text-green-600 font-medium">
+                      Completed
                     </span>
-                  )}
-                </p>
+                  </>
+                )}
               </div>
 
-              <Link
-                href={`/courses/${course.id}/lessons/${lesson.id}`}
-              >
-                <Button variant={isCompleted ? "outline" : "default"}>
-                  {isCompleted ? "Review" : "Start"}
-                </Button>
-              </Link>
             </div>
-          )
-        })}
-      </div>
+
+            <Link href={`/courses/${course.id}/lessons/${lesson.id}`}>
+              <Button
+                variant={isCompleted ? "outline" : "default"}
+              >
+                {isCompleted ? "Review" : "Start"}
+              </Button>
+            </Link>
+          </div>
+        )
+      })}
     </div>
-  )
+
+  </div>
+)
 }

@@ -84,48 +84,56 @@ export function CourseList() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="mb-8">
-        <h2 className="text-2xl font-bold text-gray-900 mb-6">Available Courses</h2>
-      </div>
-      
-      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {courses.map((course) => (
+  <div className="max-w-6xl mx-auto px-6 py-12">
+    
+    <div className="mb-12">
+      <h2 className="text-3xl font-bold tracking-tight">
+        Available Courses
+      </h2>
+      <p className="text-muted-foreground mt-2">
+        Start learning and earn XP on Solana.
+      </p>
+    </div>
+
+    <div className="grid sm:grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
+      {courses.map((course) => (
         <Link key={course.id} href={`/courses/${course.id}`}>
-          <Card className="hover:shadow-xl transition-all cursor-pointer hover:scale-[1.02]">
-            <CardHeader>
+          <Card className="group transition-all hover:shadow-xl hover:-translate-y-1 duration-200 border bg-card">
+            
+            <CardHeader className="space-y-3">
               <div className="flex justify-between items-start">
-                <CardTitle className="text-lg">
+                <CardTitle className="text-lg group-hover:text-primary transition-colors">
                   {course.title}
                 </CardTitle>
-                <Badge className="bg-indigo-100 text-indigo-800">
+
+                <Badge variant="secondary">
                   {course.difficulty}
                 </Badge>
               </div>
-            </CardHeader>
 
-            <CardContent>
-              <CardDescription className="mb-4">
+              <CardDescription>
                 Track {course.trackId} • Level {course.trackLevel}
               </CardDescription>
+            </CardHeader>
 
-              <div className="space-y-2 text-sm text-gray-600">
-                <p><strong>Difficulty:</strong> {course.difficulty}</p>
-                <p><strong>Lessons:</strong> {course.lessonCount}</p>
-                <p><strong>XP per Lesson:</strong> {course.xpPerLesson}</p>
-                <p><strong>Total XP:</strong> {course.lessonCount * course.xpPerLesson}</p>
+            <CardContent className="space-y-4">
+
+              <div className="flex justify-between text-sm text-muted-foreground">
+                <span>{course.lessonCount} Lessons</span>
+                <span>
+                  {course.lessonCount * course.xpPerLesson} XP
+                </span>
               </div>
 
-              <div className="mt-6">
-                <Button className="w-full">
-                  Start Learning
-                </Button>
-              </div>
+              <Button className="w-full">
+                Start Learning
+              </Button>
+
             </CardContent>
           </Card>
         </Link>
       ))}
-      </div>
     </div>
-  );
+  </div>
+)
 }

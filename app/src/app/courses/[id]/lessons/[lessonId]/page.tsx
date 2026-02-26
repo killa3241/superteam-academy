@@ -25,11 +25,11 @@ export default function LessonPage() {
 
   const [completed, setCompleted] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [challengePassed, setChallengePassed] = useState(false)
 
   const course = mockCourses.find((c) => c.id === courseId)
   const lesson = course?.lessons.find((l) => l.id === lessonId)
 
-  // --- Lesson position logic ---
   const lessonIndex = useMemo(() => {
     if (!course) return -1
     return course.lessons.findIndex((l) => l.id === lessonId)
@@ -45,7 +45,7 @@ export default function LessonPage() {
       ? course?.lessons[lessonIndex + 1]
       : null
 
-  // --- NEW: Read completion from bitmap ---
+  // Persisted completion read
   useEffect(() => {
     if (!wallet.publicKey || lessonIndex < 0) return
 
@@ -65,6 +65,7 @@ export default function LessonPage() {
 
     const isCompleted = (flags[wordIndex] & mask) !== 0
     setCompleted(isCompleted)
+    setChallengePassed(isCompleted)
 
   }, [wallet.publicKey, lessonIndex, courseId])
 
@@ -75,6 +76,11 @@ export default function LessonPage() {
   const handleComplete = async () => {
     if (!learningService) return
 
+    if (lesson.type === "challenge" && !challengePassed) {
+      alert("Please pass the challenge before completing the lesson.")
+      return
+    }
+
     setLoading(true)
     await learningService.completeLesson(courseId, lessonIndex)
     setCompleted(true)
@@ -82,11 +88,39 @@ export default function LessonPage() {
   }
 
   return (
-    <div className="flex flex-col gap-6 p-6">
-      <LessonLayout
-        left={
+  <div className="relative min-h-screen flex flex-col">
+
+    {/* Main Content Area */}
+    <div className="flex-1 pb-28"> {/* space for footer */}
+
+      {lesson.type === "challenge" ? (
+        <LessonLayout
+          left={
+            <LessonContent
+              title={lesson.title}
+              content={lesson.content}
+              xpReward={lesson.xpReward}
+              completed={completed}
+              loading={loading}
+              onComplete={handleComplete}
+              currentIndex={lessonIndex}
+              totalLessons={totalLessons}
+            />
+          }
+          right={
+            <LessonEditor
+            lessonType={lesson.type}
+            starterCode={lesson.starterCode}
+            challenge={lesson.challenge}
+            onPass={() => setChallengePassed(true)}
+            />
+          }
+        />
+      ) : (
+        <div className="max-w-3xl mx-auto px-6 py-10">
           <LessonContent
             title={lesson.title}
+            content={lesson.content}
             xpReward={lesson.xpReward}
             completed={completed}
             loading={loading}
@@ -94,16 +128,18 @@ export default function LessonPage() {
             currentIndex={lessonIndex}
             totalLessons={totalLessons}
           />
-        }
-        right={<LessonEditor />}
-      />
+        </div>
+      )}
 
-      <div className="flex justify-between items-center">
+    </div>
+
+    {/* Fixed Footer Navigation */}
+    <div className="fixed bottom-0 left-0 right-0 border-t shadow-sm bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div className="max-w-6xl mx-auto px-6 py-4 flex justify-between items-center">
+
         {previousLesson ? (
           <Button variant="outline" asChild>
-            <Link
-              href={`/courses/${courseId}/lessons/${previousLesson.id}`}
-            >
+            <Link href={`/courses/${courseId}/lessons/${previousLesson.id}`}>
               ← Previous
             </Link>
           </Button>
@@ -113,16 +149,17 @@ export default function LessonPage() {
 
         {nextLesson ? (
           <Button asChild>
-            <Link
-              href={`/courses/${courseId}/lessons/${nextLesson.id}`}
-            >
+            <Link href={`/courses/${courseId}/lessons/${nextLesson.id}`}>
               Next →
             </Link>
           </Button>
         ) : (
           <div />
         )}
+
       </div>
     </div>
-  )
+
+  </div>
+)
 }
