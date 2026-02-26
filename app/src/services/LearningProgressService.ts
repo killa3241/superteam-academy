@@ -13,7 +13,7 @@ import { LessonBitmap } from "@/lib/utils/lesson-bitmap";
 import { PDADerivation } from "@/lib/solana/pda";
 import { createProgram } from "@/lib/solana/program";
 import { connection } from "@/lib/solana/connection";
-
+import { mockCourses } from "@/domain/mockCourses"
 
 import { ILearningProgressService } from "./interfaces/ILearningProgressService";
 
@@ -53,6 +53,37 @@ export class LearningProgressService implements ILearningProgressService {
     this.program = createProgram(wallet, connection);
   }
 
+  /* ----------------------- LOCAL STORAGE HELPERS ----------------------- */
+
+  private getLocalKey(suffix: string) {
+    return `superteam:${this.wallet.publicKey.toBase58()}:${suffix}`
+  }
+
+  private getLocalXP(): number {
+    if (typeof window === "undefined") return 0
+    const raw = localStorage.getItem(this.getLocalKey("xp"))
+    return raw ? parseInt(raw, 10) : 0
+  }
+
+  private setLocalXP(xp: number) {
+    if (typeof window === "undefined") return
+    localStorage.setItem(this.getLocalKey("xp"), xp.toString())
+  }
+
+  private getLocalLessonFlags(courseId: string): number[] {
+    if (typeof window === "undefined") return [0, 0, 0, 0]
+    const raw = localStorage.getItem(this.getLocalKey(`lessons:${courseId}`))
+    if (!raw) return [0, 0, 0, 0]
+    return JSON.parse(raw)
+  }
+
+  private setLocalLessonFlags(courseId: string, flags: number[]) {
+    if (typeof window === "undefined") return
+    localStorage.setItem(
+      this.getLocalKey(`lessons:${courseId}`),
+      JSON.stringify(flags)
+    )
+  } 
 
 /* ----------------------------- INTERNAL HELPERS ----------------------------- */
 
@@ -72,26 +103,11 @@ export class LearningProgressService implements ILearningProgressService {
   /* ----------------------------- COURSES ---------------------------------- */
 
   async getAllCourses(): Promise<Course[]> {
-    try {
-      const accounts = await (this.program.account as any).course.all();
-
-      return accounts
-        .filter((c: any) => c.account?.isActive !== false)
-        .map((c: any) => c.account);
-    } catch (error) {
-      console.error("Error fetching courses:", error);
-      return [];
-    }
+    return mockCourses
   }
 
   async getCourse(courseId: string): Promise<Course | null> {
-    try {
-      const [coursePDA] = PDADerivation.getCoursePDA(courseId);
-      return await (this.program.account as any).course.fetch(coursePDA);
-    } catch (error) {
-      console.error("Error fetching course:", error);
-      return null;
-    }
+      return mockCourses.find((c) => c.id === courseId) ?? null
   }
 
   /* ----------------------------- ENROLLMENT ------------------------------- */
@@ -139,65 +155,48 @@ export class LearningProgressService implements ILearningProgressService {
 
   /* ----------------------------- LESSONS ---------------------------------- */
 
-  async completeLesson(courseId: string, lessonIndex: number): Promise<string> {
-    const [coursePDA] = PDADerivation.getCoursePDA(courseId);
-    const [enrollmentPDA] = PDADerivation.getEnrollmentPDA(
-      courseId,
-      this.wallet.publicKey
-    );
-    const [configPDA] = PDADerivation.getConfigPDA();
-    const [minterRolePDA] = PDADerivation.getMinterRolePDA(
-      this.wallet.publicKey
-    );
+    async completeLesson(courseId: string, lessonIndex: number): Promise<string> {
+    const flags = this.getLocalLessonFlags(courseId)
 
-    const config = await (this.program.account as any).config.fetch(configPDA);
+    const wordIndex = Math.floor(lessonIndex / 32)
+    const bitIndex = lessonIndex % 32
+    const mask = 1 << bitIndex
 
-    const userXpAccount = PDADerivation.getXPTokenAddress(
-      this.wallet.publicKey,
-      config.xpMint
-    );
+    if ((flags[wordIndex] & mask) !== 0) {
+      return "already-completed"
+    }
 
-    const tx = await (this.program as any).methods
-      .completeLesson(courseId, lessonIndex)
-      .accounts({
-        course: coursePDA,
-        enrollment: enrollmentPDA,
-        learner: this.wallet.publicKey,
-        minterRole: minterRolePDA,
-        xpMint: config.xpMint,
-        learnerXpAccount: userXpAccount,
-        tokenProgram: TOKEN_2022_PROGRAM_ID,
-      })
-      .transaction();
+    flags[wordIndex] |= mask
+    this.setLocalLessonFlags(courseId, flags)
 
-    const signed = await this.wallet.signTransaction(tx);
-    const signature = await this.connection.sendRawTransaction(
-      signed.serialize()
-    );
-    await this.confirm(signature);
+    // Stub XP reward (configurable later)
+    const xpReward = 25
+    const currentXP = this.getLocalXP()
+    this.setLocalXP(currentXP + xpReward)
 
-    return signature;
+    return "local-stub-success"
   }
 
   /* ----------------------------- XP -------------------------------------- */
 
-  async getUserXPBalance(): Promise<BN> {
+    async getUserXPBalance(): Promise<BN> {
     try {
-      const [configPDA] = PDADerivation.getConfigPDA();
-      const config = await (this.program.account as any).config.fetch(configPDA);
+      const [configPDA] = PDADerivation.getConfigPDA()
+      const config = await (this.program.account as any).config.fetch(configPDA)
 
       const userXpAccount = PDADerivation.getXPTokenAddress(
         this.wallet.publicKey,
         config.xpMint
-      );
+      )
 
       const balance = await this.connection.getTokenAccountBalance(
         userXpAccount
-      );
+      )
 
-      return new BN(balance.value.amount);
+      return new BN(balance.value.amount)
     } catch {
-      return new BN(0);
+      // Fallback to local XP
+      return new BN(this.getLocalXP())
     }
   }
 
@@ -216,14 +215,16 @@ export class LearningProgressService implements ILearningProgressService {
       const enrollment = await this.getEnrollment(course.courseId);
       if (!enrollment) continue;
 
+      const localFlags = this.getLocalLessonFlags(course.courseId)
+
       const completedLessons = LessonBitmap.countCompletedLessons(
-        enrollment.lessonFlags
-      );
+        localFlags
+      )
 
       const progress = LessonBitmap.calculateProgress(
-        enrollment.lessonFlags,
+        localFlags,
         course.lessonCount
-      );
+      )
 
       results.push({
         course,

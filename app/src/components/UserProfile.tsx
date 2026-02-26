@@ -18,35 +18,38 @@ export function UserProfile() {
   const learningService = useLearningProgressService();
 
   useEffect(() => {
-    loadUserData();
-  }, [learningService]);
-
-  const loadUserData = async () => {
     if (!learningService) {
       setError("Wallet must be connected to load profile");
       setLoading(false);
       return;
     }
 
+    loadUserData();
+  }, [learningService]);
+
+  const loadUserData = async () => {
+    if (!learningService) return;
+
     try {
       setLoading(true);
-      
-      const [xp, progress] = await Promise.all([
-        learningService.getUserXPBalance(),
-        learningService.getUserProgress()
-      ]);
-      
-      const level = XPCalculator.calculateLevel(xp);
-      const progressToNext = XPCalculator.levelProgress(xp);
+      setError(null);
 
-      const xpNumber = xp.toNumber();
+      const [xpBN, progress] = await Promise.all([
+        learningService.getUserXPBalance(),
+        learningService.getUserProgress(),
+      ]);
+
+      const xpNumber = xpBN.toNumber();
+      const level = XPCalculator.calculateLevel(xpBN);
+      const progressToNext = XPCalculator.levelProgress(xpBN);
 
       setUserXP(xpNumber);
       setUserLevel(level);
       setLevelProgress(progressToNext);
       setUserProgress(progress);
-    } catch (error) {
-      console.error("Error loading user data:", error);
+    } catch (err) {
+      console.error("Error loading user data:", err);
+      setError("Failed to load user profile");
     } finally {
       setLoading(false);
     }
@@ -69,13 +72,28 @@ export function UserProfile() {
     );
   }
 
+  if (error) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Your Progress</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-red-500 text-sm">{error}</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
   const completedCourses = userProgress.filter(p => p.isCompleted).length;
   const inProgressCourses = userProgress.filter(p => !p.isCompleted).length;
-  const totalLessonsCompleted = userProgress.reduce((sum, p) => sum + p.completedLessons, 0);
+  const totalLessonsCompleted = userProgress.reduce(
+    (sum, p) => sum + p.completedLessons,
+    0
+  );
 
   return (
     <div className="space-y-6">
-      {/* XP and Level Overview */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
@@ -86,15 +104,18 @@ export function UserProfile() {
             Track your learning journey and achievements
           </CardDescription>
         </CardHeader>
+
         <CardContent className="space-y-6">
-          {/* XP Display */}
           <div className="space-y-2">
             <div className="flex justify-between items-center">
-              <span className="text-2xl font-bold text-indigo-600">{userXP.toLocaleString()} XP</span>
+              <span className="text-2xl font-bold text-indigo-600">
+                {userXP.toLocaleString()} XP
+              </span>
               <Badge variant="outline">
                 Level {userLevel}
               </Badge>
             </div>
+
             <div className="space-y-1">
               <div className="flex justify-between text-sm text-gray-600">
                 <span>Progress to Level {userLevel + 1}</span>
@@ -102,30 +123,35 @@ export function UserProfile() {
               </div>
               <Progress value={levelProgress} className="w-full" />
             </div>
+
             <p className="text-xs text-gray-500">
               {XPCalculator.xpForLevel(userLevel + 1).toNumber() - userXP} XP to next level
             </p>
           </div>
 
-          {/* Stats Grid */}
           <div className="grid grid-cols-3 gap-4 pt-4 border-t">
             <div className="text-center">
-              <div className="text-2xl font-bold text-green-600">{completedCourses}</div>
+              <div className="text-2xl font-bold text-green-600">
+                {completedCourses}
+              </div>
               <div className="text-sm text-gray-600">Completed</div>
             </div>
             <div className="text-center">
-              <div className="text-2xl font-bold text-blue-600">{inProgressCourses}</div>
+              <div className="text-2xl font-bold text-blue-600">
+                {inProgressCourses}
+              </div>
               <div className="text-sm text-gray-600">In Progress</div>
             </div>
             <div className="text-center">
-              <div className="text-2xl font-bold text-purple-600">{totalLessonsCompleted}</div>
+              <div className="text-2xl font-bold text-purple-600">
+                {totalLessonsCompleted}
+              </div>
               <div className="text-sm text-gray-600">Lessons Done</div>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Course Progress Details */}
       {userProgress.length > 0 && (
         <Card>
           <CardHeader>
@@ -140,25 +166,33 @@ export function UserProfile() {
                 <div key={index} className="border rounded-lg p-4">
                   <div className="flex justify-between items-start mb-2">
                     <div>
-                      <h4 className="font-semibold">{progress.course.courseId}</h4>
+                      <h4 className="font-semibold">
+                        {progress.course.courseId}
+                      </h4>
                       <p className="text-sm text-gray-600">
                         Track {progress.course.trackId} • Level {progress.course.trackLevel}
                       </p>
                     </div>
-                    <Badge variant={progress.isCompleted ? "default" : "secondary"}>
+                    <Badge
+                      variant={progress.isCompleted ? "default" : "secondary"}
+                    >
                       {progress.isCompleted ? "Completed" : "In Progress"}
                     </Badge>
                   </div>
-                  
+
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
                       <span>Progress</span>
-                      <span>{progress.completedLessons}/{progress.totalLessons} lessons</span>
+                      <span>
+                        {progress.completedLessons}/{progress.totalLessons} lessons
+                      </span>
                     </div>
                     <Progress value={progress.progress} className="w-full" />
                     <div className="flex justify-between text-xs text-gray-500">
                       <span>{Math.round(progress.progress)}% complete</span>
-                      <span>{progress.completedLessons * progress.course.xpPerLesson} XP earned</span>
+                      <span>
+                        {progress.completedLessons * progress.course.xpPerLesson} XP earned
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -168,11 +202,12 @@ export function UserProfile() {
         </Card>
       )}
 
-      {/* Empty State */}
       {userProgress.length === 0 && (
         <Card>
           <CardContent className="text-center py-12">
-            <h3 className="text-lg font-semibold mb-2">Start Your Learning Journey</h3>
+            <h3 className="text-lg font-semibold mb-2">
+              Start Your Learning Journey
+            </h3>
             <p className="text-gray-600 mb-4">
               Enroll in your first course to start earning XP and tracking your progress
             </p>

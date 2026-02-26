@@ -8,16 +8,10 @@ import { useLearningProgressService } from "@/services/LearningProgressService";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { Loader2 } from "lucide-react";
 
-type Course = {
-    courseId: string;
-    lessonCount: number;
-    difficulty: number;
-    xpPerLesson: number;
-    trackId: number;
-    trackLevel: number;
-    prerequisite: string | null;
-    isActive: boolean;
-  };
+import { CourseDefinition } from "@/domain/mockCourses"
+import Link from "next/link"
+
+type Course = CourseDefinition
 
 export function CourseList() {
     
@@ -25,50 +19,25 @@ export function CourseList() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const { connected } = useWallet();
   const learningService = useLearningProgressService();
 
   useEffect(() => {
-    const loadCourses = async () => {
-      
-      if (!learningService) {
-        setLoading(false);
-        setCourses([]);
-        return;
-      }
-
-      try {
-        setLoading(true);
-        setError(null);
-        const fetchedCourses = await learningService.getAllCourses();
-        setCourses(fetchedCourses);
-      } catch (err) {
-        console.error("Error fetching courses:", err);
-        setError(err instanceof Error ? err.message : "Failed to fetch courses");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadCourses();
-  }, [learningService]);
-
-  if (!connected) {
-    return (
-      <div className="flex justify-center items-center py-12">
-        <Card className="w-full max-w-md">
-          <CardHeader>
-            <CardTitle>Please connect your wallet</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-gray-600">
-              Connect your Phantom wallet to fetch available courses from Devnet.
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-    );
+  const loadCourses = async () => {
+    try {
+      setLoading(true)
+      const fetchedCourses = await learningService?.getAllCourses()
+      setCourses(fetchedCourses ?? [])
+    } catch (err) {
+      console.error("Error fetching courses:", err)
+      setError("Failed to fetch courses")
+    } finally {
+      setLoading(false)
+    }
   }
+
+    loadCourses()
+  }, [learningService])
+  
 
   if (loading) {
     return (
@@ -122,60 +91,40 @@ export function CourseList() {
       
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
         {courses.map((course) => (
-            <Card
-              key={course.courseId}
-              className="hover:shadow-lg transition-shadow"
-            >
-              <CardHeader>
-                <div className="flex justify-between items-start">
-                  <CardTitle className="text-lg">
-                    {course.courseId}
-                  </CardTitle>
-                  <Badge
-                    variant={course.isActive ? "default" : "secondary"}
-                    className={
-                      course.isActive
-                        ? "bg-green-100 text-green-800"
-                        : "bg-gray-100 text-gray-800"
-                    }
-                  >
-                    {course.isActive ? "Active" : "Inactive"}
-                  </Badge>
-                </div>
-              </CardHeader>
+        <Link key={course.id} href={`/courses/${course.id}`}>
+          <Card className="hover:shadow-xl transition-all cursor-pointer hover:scale-[1.02]">
+            <CardHeader>
+              <div className="flex justify-between items-start">
+                <CardTitle className="text-lg">
+                  {course.title}
+                </CardTitle>
+                <Badge className="bg-indigo-100 text-indigo-800">
+                  {course.difficulty}
+                </Badge>
+              </div>
+            </CardHeader>
 
-              <CardContent>
-                <CardDescription className="mb-4">
-                  Track {course.trackId} • Level {course.trackLevel}
-                </CardDescription>
+            <CardContent>
+              <CardDescription className="mb-4">
+                Track {course.trackId} • Level {course.trackLevel}
+              </CardDescription>
 
-                <div className="space-y-2 text-sm text-gray-600">
-                  <p>
-                    <strong>Difficulty:</strong>{" "}
-                    {"⭐".repeat(course.difficulty || 1)}
-                  </p>
-                  <p>
-                    <strong>Lessons:</strong> {course.lessonCount}
-                  </p>
-                  <p>
-                    <strong>XP per Lesson:</strong> {course.xpPerLesson}
-                  </p>
-                  <p>
-                    <strong>Total XP:</strong>{" "}
-                    {course.lessonCount * course.xpPerLesson}
-                  </p>
-                </div>
+              <div className="space-y-2 text-sm text-gray-600">
+                <p><strong>Difficulty:</strong> {course.difficulty}</p>
+                <p><strong>Lessons:</strong> {course.lessonCount}</p>
+                <p><strong>XP per Lesson:</strong> {course.xpPerLesson}</p>
+                <p><strong>Total XP:</strong> {course.lessonCount * course.xpPerLesson}</p>
+              </div>
 
-                {course.prerequisite && (
-                  <div className="mt-4 p-3 bg-yellow-50 rounded border border-yellow-200">
-                    <p className="text-sm text-yellow-800">
-                      <strong>Prerequisite Required</strong>
-                    </p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          ))}
+              <div className="mt-6">
+                <Button className="w-full">
+                  Start Learning
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
+      ))}
       </div>
     </div>
   );
