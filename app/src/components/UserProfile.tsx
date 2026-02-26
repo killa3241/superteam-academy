@@ -1,14 +1,15 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { useLearningProgressService } from "@/services/LearningProgressService";
 import { XPCalculator } from "@/lib/utils/xp";
+import { useXpBalance } from "@/hooks/useXpBalance";
+import { BN } from "@coral-xyz/anchor"
 
 export function UserProfile() {
-  const [userXP, setUserXP] = useState<number>(0);
   const [userLevel, setUserLevel] = useState<number>(0);
   const [levelProgress, setLevelProgress] = useState<number>(0);
   const [userProgress, setUserProgress] = useState<any[]>([]);
@@ -16,6 +17,9 @@ export function UserProfile() {
   const [error, setError] = useState<string | null>(null);
 
   const learningService = useLearningProgressService();
+  const { data: xpData, isLoading: xpLoading } = useXpBalance();
+
+  const previousLevelRef = useRef<number>(0);
 
   useEffect(() => {
     if (!learningService) {
@@ -24,29 +28,38 @@ export function UserProfile() {
       return;
     }
 
-    loadUserData();
+    loadUserProgress();
   }, [learningService]);
 
-  const loadUserData = async () => {
+  useEffect(() => {
+    if (xpData === undefined) return;
+
+    const xpNumber = xpData ?? 0;
+    const xpBN = new BN(xpNumber);
+
+    const level = XPCalculator.calculateLevel(xpBN);
+    const progressToNext = XPCalculator.levelProgress(xpBN);
+
+    setUserLevel(level);
+    setLevelProgress(progressToNext);
+
+    if (level > previousLevelRef.current) {
+      previousLevelRef.current = level;
+      console.log("Level Up!");
+    }
+
+  }, [xpData]);
+
+  const loadUserProgress = async () => {
     if (!learningService) return;
 
     try {
       setLoading(true);
       setError(null);
 
-      const [xpBN, progress] = await Promise.all([
-        learningService.getUserXPBalance(),
-        learningService.getUserProgress(),
-      ]);
-
-      const xpNumber = xpBN.toNumber();
-      const level = XPCalculator.calculateLevel(xpBN);
-      const progressToNext = XPCalculator.levelProgress(xpBN);
-
-      setUserXP(xpNumber);
-      setUserLevel(level);
-      setLevelProgress(progressToNext);
+      const progress = await learningService.getUserProgress();
       setUserProgress(progress);
+
     } catch (err) {
       console.error("Error loading user data:", err);
       setError("Failed to load user profile");
@@ -55,7 +68,7 @@ export function UserProfile() {
     }
   };
 
-  if (loading) {
+  if (loading || xpLoading) {
     return (
       <Card>
         <CardHeader>
@@ -85,6 +98,8 @@ export function UserProfile() {
     );
   }
 
+  const userXP = xpData ?? 0;
+
   const completedCourses = userProgress.filter(p => p.isCompleted).length;
   const inProgressCourses = userProgress.filter(p => !p.isCompleted).length;
   const totalLessonsCompleted = userProgress.reduce(
@@ -106,6 +121,8 @@ export function UserProfile() {
         </CardHeader>
 
         <CardContent className="space-y-6">
+
+          {/* XP + Level */}
           <div className="space-y-2">
             <div className="flex justify-between items-center">
               <span className="text-2xl font-bold text-indigo-600">
@@ -125,10 +142,13 @@ export function UserProfile() {
             </div>
 
             <p className="text-xs text-gray-500">
-              {XPCalculator.xpForLevel(userLevel + 1).toNumber() - userXP} XP to next level
+              {Number(
+                XPCalculator.xpForLevel(userLevel + 1)
+              ) - userXP} XP to next level
             </p>
           </div>
 
+          {/* Stats Grid */}
           <div className="grid grid-cols-3 gap-4 pt-4 border-t">
             <div className="text-center">
               <div className="text-2xl font-bold text-green-600">
@@ -149,9 +169,11 @@ export function UserProfile() {
               <div className="text-sm text-gray-600">Lessons Done</div>
             </div>
           </div>
+
         </CardContent>
       </Card>
 
+      {/* Course Progress Breakdown */}
       {userProgress.length > 0 && (
         <Card>
           <CardHeader>

@@ -84,9 +84,37 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-background">
-          
 
       <main className="container mx-auto px-4 py-8">
+
+        {/* XP Summary */}
+        <div className="mb-8">
+          <Card className="bg-muted/30 border">
+            <CardHeader>
+              <CardTitle>Your XP</CardTitle>
+              <CardDescription>
+                Your on-chain learning progress
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {isLoading && (
+                <p className="text-muted-foreground">Loading XP...</p>
+              )}
+
+              {error && (
+                <p className="text-red-500">Unable to fetch XP</p>
+              )}
+
+              {!isLoading && !error && (
+                <p className="text-3xl font-bold">
+                  {xp ?? 0} XP
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Navigation Tabs */}
         <div className="mb-8">
           <nav className="flex gap-6 border-b pb-2">
             <Button
@@ -95,20 +123,22 @@ export default function Home() {
             >
               Courses
             </Button>
+
             <Button
               variant={activeTab === "profile" ? "default" : "ghost"}
               onClick={() => setActiveTab("profile")}
-              
             >
               My Progress
             </Button>
           </nav>
         </div>
 
+        {/* Tab Content */}
         <div className="max-w-6xl mx-auto">
           {activeTab === "courses" && <CourseList />}
           {activeTab === "profile" && <UserProfile />}
         </div>
+
       </main>
 
       <footer className="bg-white border-t mt-12">
@@ -121,6 +151,7 @@ export default function Home() {
           </div>
         </div>
       </footer>
+
     </div>
   );
 }

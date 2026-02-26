@@ -8,6 +8,8 @@ import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import Link from "next/link"
 
+import { useWallet } from "@solana/wallet-adapter-react"
+
 export default function CourseDetailPage() {
   const params = useParams()
   const courseId = params?.id as string
@@ -15,16 +17,35 @@ export default function CourseDetailPage() {
   const course = mockCourses.find((c) => c.id === courseId)
 
   const [completedLessons, setCompletedLessons] = useState<number[]>([])
-
+  const wallet = useWallet()  
   // --- Read completed lessons from localStorage ---
   useEffect(() => {
-    if (!course) return
+    if (!course || !wallet.publicKey) return
 
-    const stored = localStorage.getItem(`completed_${courseId}`)
-    if (stored) {
-      setCompletedLessons(JSON.parse(stored))
+    const key = `superteam:${wallet.publicKey.toBase58()}:lessons:${courseId}`
+    const raw = localStorage.getItem(key)
+
+    if (!raw) {
+        setCompletedLessons([])
+        return
     }
-  }, [courseId, course])
+
+    const flags: number[] = JSON.parse(raw)
+
+    const completedIds: number[] = []
+
+    course.lessons.forEach((lesson, index) => {
+        const wordIndex = Math.floor(index / 32)
+        const bitIndex = index % 32
+        const mask = 1 << bitIndex
+
+        if ((flags[wordIndex] & mask) !== 0) {
+        completedIds.push(lesson.id)
+        }
+    })
+
+    setCompletedLessons(completedIds)
+    }, [wallet.publicKey, courseId, course])
 
   if (!course) {
     return <div className="p-8">Course not found.</div>

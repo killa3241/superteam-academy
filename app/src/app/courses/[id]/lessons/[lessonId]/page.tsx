@@ -14,6 +14,8 @@ import { LessonContent } from "@/components/lesson/LessonContent"
 import { LessonEditor } from "@/components/lesson/LessonEditor"
 import { Button } from "@/components/ui/button"
 
+import { useXpAnimation } from "@/context/XpAnimationContext"
+
 export default function LessonPage() {
   const params = useParams()
   const wallet = useWallet()
@@ -72,21 +74,37 @@ export default function LessonPage() {
   if (!course || !lesson) {
     return <div className="p-8">Lesson not found.</div>
   }
-
+  const { triggerXpAnimation } = useXpAnimation()
+  
   const handleComplete = async () => {
-    if (!learningService) return
-
-    if (lesson.type === "challenge" && !challengePassed) {
-      alert("Please pass the challenge before completing the lesson.")
-      return
+    if (completed) return
+    if (!learningService) {
+        alert("Wallet not connected or service not ready.")
+        return
     }
 
-    setLoading(true)
-    await learningService.completeLesson(courseId, lessonIndex)
-    setCompleted(true)
-    setLoading(false)
-  }
+    if (lesson.type === "challenge" && !challengePassed) {
+        alert("Please pass the challenge before completing the lesson.")
+        return
+    }
 
+    try {
+        setLoading(true)
+
+        await learningService.completeLesson(courseId, lessonIndex)
+
+        setCompleted(true)
+
+        
+        triggerXpAnimation(lesson.xpReward)
+
+    } catch (err) {
+        console.error(err)
+        alert("Failed to complete lesson.")
+    } finally {
+        setLoading(false)
+    }
+    }
   return (
   <div className="relative min-h-screen flex flex-col">
 
@@ -101,7 +119,7 @@ export default function LessonPage() {
               content={lesson.content}
               xpReward={lesson.xpReward}
               completed={completed}
-              loading={loading}
+              loading={loading || !learningService}
               onComplete={handleComplete}
               currentIndex={lessonIndex}
               totalLessons={totalLessons}
@@ -123,7 +141,7 @@ export default function LessonPage() {
             content={lesson.content}
             xpReward={lesson.xpReward}
             completed={completed}
-            loading={loading}
+            loading={loading || !learningService}
             onComplete={handleComplete}
             currentIndex={lessonIndex}
             totalLessons={totalLessons}

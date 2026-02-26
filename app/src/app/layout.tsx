@@ -4,9 +4,10 @@ import "./globals.css";
 import { SolanaProviders } from "@/components/SolanaProviders";
 import { QueryProvider } from "@/providers/QueryProvider";
 import dynamic from "next/dynamic";
+import { XpAnimationProvider } from "@/context/XpAnimationContext";
 
 const Header = dynamic(
-  () => import("@/components/layout/Header").then(mod => mod.Header),
+  () => import("@/components/layout/Header").then((mod) => mod.Header),
   { ssr: false }
 );
 
@@ -40,10 +41,12 @@ export default function RootLayout({
       >
         <QueryProvider>
           <SolanaProviders>
-            <Header />
-            <main className="min-h-screen">
-              {children}
-            </main>
+            <XpAnimationProvider>
+              <Header />
+              <main className="min-h-screen">
+                {children}
+              </main>
+            </XpAnimationProvider>
           </SolanaProviders>
         </QueryProvider>
       </body>

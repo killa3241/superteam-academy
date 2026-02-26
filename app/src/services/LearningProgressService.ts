@@ -212,19 +212,23 @@ export class LearningProgressService implements ILearningProgressService {
     const results: UserProgressData[] = [];
 
     for (const course of courses) {
-      const enrollment = await this.getEnrollment(course.courseId);
-      if (!enrollment) continue;
 
-      const localFlags = this.getLocalLessonFlags(course.courseId)
+      const enrollment = await this.getEnrollment(course.id);
+      
+      const localFlagsNumbers = this.getLocalLessonFlags(course.id);
+
+      const localFlagsBN = localFlagsNumbers.map(n => new BN(n));
 
       const completedLessons = LessonBitmap.countCompletedLessons(
-        localFlags
-      )
+        localFlagsBN
+      );
 
       const progress = LessonBitmap.calculateProgress(
-        localFlags,
+        localFlagsBN,
         course.lessonCount
-      )
+      );
+
+      const isCompleted = completedLessons === course.lessonCount;
 
       results.push({
         course,
@@ -232,13 +236,12 @@ export class LearningProgressService implements ILearningProgressService {
         progress,
         completedLessons,
         totalLessons: course.lessonCount,
-        isCompleted: !!enrollment.completedAt,
+        isCompleted,
       });
     }
 
     return results;
   }
-
   /* ----------------------- TOKEN ACCOUNT CREATION ------------------------ */
 
   async ensureXPTokenAccount(): Promise<void> {
