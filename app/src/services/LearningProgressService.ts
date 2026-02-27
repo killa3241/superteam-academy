@@ -7,33 +7,40 @@ import {
   createAssociatedTokenAccountInstruction,
   TOKEN_2022_PROGRAM_ID,
 } from "@solana/spl-token";
-
-import { XPCalculator } from "@/lib/utils/xp";
 import { LessonBitmap } from "@/lib/utils/lesson-bitmap";
 import { PDADerivation } from "@/lib/solana/pda";
 import { createProgram } from "@/lib/solana/program";
 import { connection } from "@/lib/solana/connection";
 import { mockCourses } from "@/domain/mockCourses"
-
 import { ILearningProgressService } from "./interfaces/ILearningProgressService";
+import type { CourseDefinition } from "@/domain/courses"
+import { deriveLevel } from "@/domain/level"
+
 
 /* -------------------------------------------------------------------------- */
 /*                                  Types                                     */
 /* -------------------------------------------------------------------------- */
 
+type Course = CourseDefinition
 
-type Course = any;
-type Enrollment = any;
-type Config = any;
+interface Enrollment {
+  learner: string
+  courseId: string
+  enrolledAt: number
+}
+
+interface Config {
+  xpMint: string
+}
+
 export interface UserProgressData {
   course: Course;
-  enrollment: Enrollment;
+  enrollment: Enrollment | null;
   progress: number;
   completedLessons: number;
   totalLessons: number;
   isCompleted: boolean;
 }
-
 /* -------------------------------------------------------------------------- */
 /*                           LearningProgressService                          */
 /* -------------------------------------------------------------------------- */
@@ -119,7 +126,8 @@ export class LearningProgressService implements ILearningProgressService {
         this.wallet.publicKey
       );
 
-      return await (this.program.account as any).enrollment.fetchNullable(enrollmentPDA);
+      const enrollmentAccount = (this.program.account as Record<string, any>).enrollment;
+      return await enrollmentAccount.fetchNullable(enrollmentPDA);  
 
     } catch (error) {
       console.error("Error fetching enrollment:", error);
@@ -170,9 +178,14 @@ export class LearningProgressService implements ILearningProgressService {
     this.setLocalLessonFlags(courseId, flags)
 
     // Stub XP reward (configurable later)
-    const xpReward = 25
+    const course = await this.getCourse(courseId)
+    if (!course) return "course-not-found"
+
+    const lesson = course.lessons[lessonIndex]
+    if (!lesson) return "lesson-not-found"
+
     const currentXP = this.getLocalXP()
-    this.setLocalXP(currentXP + xpReward)
+    this.setLocalXP(currentXP + lesson.xpReward)
 
     return "local-stub-success"
   }
@@ -202,9 +215,8 @@ export class LearningProgressService implements ILearningProgressService {
 
   async getUserLevel(): Promise<number> {
     const xp = await this.getUserXPBalance();
-    return XPCalculator.calculateLevel(xp);
+    return deriveLevel(xp.toNumber());
   }
-
   /* ----------------------------- PROGRESS -------------------------------- */
 
   async getUserProgress(): Promise<UserProgressData[]> {

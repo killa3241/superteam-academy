@@ -2,19 +2,30 @@
 
 import { useEffect, useMemo, useState } from "react"
 import { useParams } from "next/navigation"
-import { mockCourses } from "@/domain/mockCourses"
+import { useLearningProgressService } from "@/services/LearningProgressService"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import Link from "next/link"
-
+import type { CourseDefinition } from "@/domain/courses"
 import { useWallet } from "@solana/wallet-adapter-react"
 
 export default function CourseDetailPage() {
   const params = useParams()
   const courseId = params?.id as string
 
-  const course = mockCourses.find((c) => c.id === courseId)
+  const learningService = useLearningProgressService()
+  const [course, setCourse] = useState<CourseDefinition | null>(null)
+
+  useEffect(() => {
+    const loadCourse = async () => {
+      if (!learningService || !courseId) return
+      const fetched = await learningService.getCourse(courseId)
+      setCourse(fetched)
+    }
+
+  loadCourse()
+}, [learningService, courseId])
 
   const [completedLessons, setCompletedLessons] = useState<number[]>([])
   const wallet = useWallet()  

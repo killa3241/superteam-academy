@@ -8,7 +8,7 @@ import { Progress } from "@/components/ui/progress";
 import { useLearningProgressService } from "@/services/LearningProgressService";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { Loader2 } from "lucide-react";
-import { CourseDefinition } from "@/domain/mockCourses";
+import type { CourseDefinition } from "@/domain/courses";
 import Link from "next/link";
 
 type Course = CourseDefinition;
@@ -22,11 +22,18 @@ export function CourseList() {
   const learningService = useLearningProgressService();
 
   useEffect(() => {
-    const loadCourses = async () => {
-      try {
-        setLoading(true);
-        const fetchedCourses = await learningService?.getAllCourses();
+  const loadCourses = async () => {
+    try {
+      setLoading(true);
+
+      if (learningService) {
+        const fetchedCourses = await learningService.getAllCourses();
         setCourses(fetchedCourses ?? []);
+      } else {
+        // Fallback to domain mock data when wallet not connected
+        const { mockCourses } = await import("@/domain/mockCourses");
+        setCourses(mockCourses);
+      }
       } catch (err) {
         console.error("Error fetching courses:", err);
         setError("Failed to fetch courses");
@@ -37,7 +44,6 @@ export function CourseList() {
 
     loadCourses();
   }, [learningService]);
-
   const getProgress = (course: Course) => {
     if (!wallet.publicKey) return 0;
 

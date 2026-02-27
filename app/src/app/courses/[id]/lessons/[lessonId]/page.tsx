@@ -5,7 +5,7 @@ import { useParams } from "next/navigation"
 import { useWallet } from "@solana/wallet-adapter-react"
 import Link from "next/link"
 
-import { mockCourses } from "@/domain/mockCourses"
+import type { CourseDefinition } from "@/domain/courses"
 import { useLearningProgressService } from "@/services/LearningProgressService"
 import { LessonBitmap } from "@/lib/utils/lesson-bitmap"
 
@@ -29,7 +29,18 @@ export default function LessonPage() {
   const [loading, setLoading] = useState(false)
   const [challengePassed, setChallengePassed] = useState(false)
 
-  const course = mockCourses.find((c) => c.id === courseId)
+  const [course, setCourse] = useState<CourseDefinition | null>(null)
+
+  useEffect(() => {
+    const loadCourse = async () => {
+      if (!learningService || !courseId) return
+      const fetched = await learningService.getCourse(courseId)
+      setCourse(fetched)
+    }
+
+    loadCourse()
+  }, [learningService, courseId])
+
   const lesson = course?.lessons.find((l) => l.id === lessonId)
 
   const lessonIndex = useMemo(() => {
@@ -71,9 +82,14 @@ export default function LessonPage() {
 
   }, [wallet.publicKey, lessonIndex, courseId])
 
-  if (!course || !lesson) {
+  if (!course) {
+  return <div className="p-8">Loading lesson...</div>
+  }
+
+  if (!lesson) {
     return <div className="p-8">Lesson not found.</div>
   }
+  
   const { triggerXpAnimation } = useXpAnimation()
   
   const handleComplete = async () => {

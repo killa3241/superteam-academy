@@ -1,7 +1,9 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { CheckCircle } from "lucide-react"
+import { useXpAnimation } from "@/context/XpAnimationContext"
 
 interface LessonContentProps {
   title: string
@@ -24,20 +26,36 @@ export function LessonContent({
   currentIndex,
   totalLessons,
 }: LessonContentProps) {
+
+  const { xpAnimation } = useXpAnimation()
+  const [showFloatingXp, setShowFloatingXp] = useState(false)
+  const [pulse, setPulse] = useState(false)
+
+  useEffect(() => {
+    if (!xpAnimation) return
+
+    setShowFloatingXp(true)
+    setPulse(true)
+
+    const timer = setTimeout(() => {
+      setShowFloatingXp(false)
+      setPulse(false)
+    }, 1000)
+
+    return () => clearTimeout(timer)
+  }, [xpAnimation])
+
   return (
     <div className="space-y-8">
 
-      {/* Progress Indicator */}
       <div className="text-xs uppercase tracking-wide text-muted-foreground">
         Lesson {currentIndex + 1} of {totalLessons}
       </div>
 
-      {/* Title */}
       <h1 className="text-3xl font-semibold tracking-tight">
         {title}
       </h1>
 
-      {/* Content */}
       <div className="space-y-4 text-muted-foreground leading-relaxed">
         {content.split("\n").map((line, index) => {
           if (line.trim().startsWith("- ")) {
@@ -47,18 +65,24 @@ export function LessonContent({
               </li>
             )
           }
-
           if (line.trim() === "") return null
-
           return <p key={index}>{line}</p>
         })}
       </div>
 
-      {/* Divider */}
       <hr className="border-muted" />
 
-      {/* Reward Card */}
-      <div className="rounded-2xl border bg-muted/30 p-6 flex justify-between items-center">
+      <div
+        className={`relative rounded-2xl border bg-muted/30 p-6 flex justify-between items-center transition-all duration-300 ${
+          pulse ? "scale-105 border-green-500 shadow-lg" : ""
+        }`}
+      >
+
+        {showFloatingXp && xpAnimation && (
+          <div className="absolute right-8 -top-2 text-green-600 font-semibold animate-float-up pointer-events-none">
+            +{xpAnimation.amount} XP
+          </div>
+        )}
 
         <div>
           <p className="text-xs uppercase tracking-wide text-muted-foreground">
@@ -74,7 +98,7 @@ export function LessonContent({
             {loading ? "Completing..." : "Mark as Complete"}
           </Button>
         ) : (
-          <div className="flex items-center gap-2 text-green-600 font-medium">
+          <div className="flex items-center gap-2 text-green-600 font-medium animate-fade-in">
             <CheckCircle className="w-5 h-5" />
             Completed
           </div>

@@ -2,8 +2,13 @@
 
 import { createContext, useContext, useState, ReactNode } from "react"
 
+type XpAnimationPayload = {
+  amount: number
+  id: number
+}
+
 type XpAnimationContextType = {
-  xpAnimationAmount: number | null
+  xpAnimation: XpAnimationPayload | null
   triggerXpAnimation: (amount: number) => void
 }
 
@@ -12,19 +17,22 @@ const XpAnimationContext = createContext<XpAnimationContextType | undefined>(
 )
 
 export function XpAnimationProvider({ children }: { children: ReactNode }) {
-  const [xpAnimationAmount, setXpAnimationAmount] = useState<number | null>(null)
+  const [xpAnimation, setXpAnimation] = useState<XpAnimationPayload | null>(null)
 
   const triggerXpAnimation = (amount: number) => {
-    setXpAnimationAmount(amount)
+    setXpAnimation({
+      amount,
+      id: Date.now(), // unique each time
+    })
 
     setTimeout(() => {
-      setXpAnimationAmount(null)
+      setXpAnimation(null)
     }, 1200)
   }
 
   return (
     <XpAnimationContext.Provider
-      value={{ xpAnimationAmount, triggerXpAnimation }}
+      value={{ xpAnimation, triggerXpAnimation }}
     >
       {children}
     </XpAnimationContext.Provider>

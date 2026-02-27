@@ -8,11 +8,12 @@ import { useLearningProgressService } from "@/services/LearningProgressService";
 import { XPCalculator } from "@/lib/utils/xp";
 import { useXpBalance } from "@/hooks/useXpBalance";
 import { BN } from "@coral-xyz/anchor"
+import type { UserProgressData } from "@/services/LearningProgressService"
 
 export function UserProfile() {
   const [userLevel, setUserLevel] = useState<number>(0);
   const [levelProgress, setLevelProgress] = useState<number>(0);
-  const [userProgress, setUserProgress] = useState<any[]>([]);
+  const [userProgress, setUserProgress] = useState<UserProgressData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -189,7 +190,7 @@ export function UserProfile() {
                   <div className="flex justify-between items-start mb-2">
                     <div>
                       <h4 className="font-semibold">
-                        {progress.course.courseId}
+                        {progress.course.title}
                       </h4>
                       <p className="text-sm text-gray-600">
                         Track {progress.course.trackId} • Level {progress.course.trackLevel}
