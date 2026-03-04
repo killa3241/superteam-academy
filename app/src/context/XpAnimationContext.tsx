@@ -1,6 +1,7 @@
 "use client"
 
 import { createContext, useContext, useState, ReactNode } from "react"
+import { trackEvent } from "@/lib/analytics"
 
 type XpAnimationPayload = {
   amount: number
@@ -20,9 +21,13 @@ export function XpAnimationProvider({ children }: { children: ReactNode }) {
   const [xpAnimation, setXpAnimation] = useState<XpAnimationPayload | null>(null)
 
   const triggerXpAnimation = (amount: number) => {
+    trackEvent("xp_earned", {
+      amount,
+    })
+
     setXpAnimation({
       amount,
-      id: Date.now(), // unique each time
+      id: Date.now(),
     })
 
     setTimeout(() => {

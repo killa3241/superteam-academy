@@ -9,13 +9,26 @@ import { Progress } from "@/components/ui/progress"
 import Link from "next/link"
 import type { CourseDefinition } from "@/domain/courses"
 import { useWallet } from "@solana/wallet-adapter-react"
+import { useLanguage } from "@/context/LanguageContext"
+import { trackEvent } from "@/lib/analytics"
 
 export default function CourseDetailPage() {
   const params = useParams()
   const courseId = params?.id as string
 
   const learningService = useLearningProgressService()
+  const wallet = useWallet()
+  const { t } = useLanguage()
+
   const [course, setCourse] = useState<CourseDefinition | null>(null)
+  const [enrolled, setEnrolled] = useState(false)
+  const [enrollLoading, setEnrollLoading] = useState(false)
+  const [completedLessons, setCompletedLessons] = useState<number[]>([])
+
+  const getEnrollKey = () =>
+    wallet.publicKey
+      ? `superteam:${wallet.publicKey.toBase58()}:enrollment:${courseId}`
+      : null
 
   useEffect(() => {
     const loadCourse = async () => {
@@ -24,12 +37,42 @@ export default function CourseDetailPage() {
       setCourse(fetched)
     }
 
-  loadCourse()
-}, [learningService, courseId])
+    loadCourse()
+  }, [learningService, courseId])
 
-  const [completedLessons, setCompletedLessons] = useState<number[]>([])
-  const wallet = useWallet()  
-  // --- Read completed lessons from localStorage ---
+  useEffect(() => {
+    if (!wallet.publicKey) return
+    const key = getEnrollKey()
+    if (!key) return
+    const local = localStorage.getItem(key)
+    setEnrolled(!!local)
+  }, [wallet.publicKey, courseId])
+
+  const handleEnroll = async () => {
+    if (!wallet.publicKey || !course) return
+
+    try {
+      setEnrollLoading(true)
+
+      const key = getEnrollKey()
+      if (key) localStorage.setItem(key, "true")
+
+      setEnrolled(true)
+
+      trackEvent("course_enrolled", {
+        course_id: course.id,
+        course_title: course.title,
+        lesson_count: course.lessonCount,
+        total_xp: course.lessonCount * course.xpPerLesson,
+      })
+
+    } catch (err) {
+      console.error("Enrollment failed:", err)
+    } finally {
+      setEnrollLoading(false)
+    }
+  }
+
   useEffect(() => {
     if (!course || !wallet.publicKey) return
 
@@ -37,155 +80,193 @@ export default function CourseDetailPage() {
     const raw = localStorage.getItem(key)
 
     if (!raw) {
-        setCompletedLessons([])
-        return
+      setCompletedLessons([])
+      return
     }
 
     const flags: number[] = JSON.parse(raw)
-
     const completedIds: number[] = []
 
     course.lessons.forEach((lesson, index) => {
-        const wordIndex = Math.floor(index / 32)
-        const bitIndex = index % 32
-        const mask = 1 << bitIndex
+      const wordIndex = Math.floor(index / 32)
+      const bitIndex = index % 32
+      const mask = 1 << bitIndex
 
-        if ((flags[wordIndex] & mask) !== 0) {
+      if ((flags[wordIndex] & mask) !== 0) {
         completedIds.push(lesson.id)
-        }
+      }
     })
 
     setCompletedLessons(completedIds)
-    }, [wallet.publicKey, courseId, course])
+  }, [wallet.publicKey, courseId, course])
+
+  const progressPercentage = useMemo(() => {
+    if (!course || course.lessonCount === 0) return 0
+    return Math.round(
+      (completedLessons.length / course.lessonCount) * 100
+    )
+  }, [completedLessons, course])
 
   if (!course) {
-    return <div className="p-8">Course not found.</div>
+    return <div className="p-6">{t("common.loading")}</div>
   }
 
   const totalXP = course.lessonCount * course.xpPerLesson
 
-  // --- Progress calculation ---
-  const progressPercentage = useMemo(() => {
-    if (course.lessonCount === 0) return 0
-    return Math.round(
-      (completedLessons.length / course.lessonCount) * 100
-    )
-  }, [completedLessons, course.lessonCount])
+  return (
+    <div className="max-w-6xl mx-auto px-6 py-8 space-y-6">
 
-return (
-  <div className="max-w-6xl mx-auto px-6 py-14 space-y-12">
+      {/* HERO */}
+      <div className="space-y-4">
 
-    {/* Hero Section */}
-    <div className="space-y-6">
+        <div className="flex items-center gap-3">
+          <h1 className="text-3xl font-bold tracking-tight">
+            {course.title}
+          </h1>
 
-      <div className="flex items-center gap-4">
-        <h1 className="text-4xl font-bold tracking-tight">
-          {course.title}
-        </h1>
-
-        <Badge variant="secondary">
-          {course.difficulty}
-        </Badge>
-      </div>
-
-      <p className="text-muted-foreground text-lg max-w-3xl">
-        {course.description}
-      </p>
-
-      <div className="flex gap-10 text-sm text-muted-foreground pt-4 border-t pt-6">
-        <div>
-          <p className="font-medium text-foreground">
-            {course.lessonCount}
-          </p>
-          <p>Lessons</p>
+          <Badge variant="secondary">
+            {course.difficulty}
+          </Badge>
         </div>
 
-        <div>
-          <p className="font-medium text-foreground">
-            {totalXP}
-          </p>
-          <p>Total XP</p>
-        </div>
+        <p className="text-muted-foreground text-base max-w-2xl">
+          {course.description}
+        </p>
 
-        <div>
-          <p className="font-medium text-foreground">
-            {course.trackLevel}
-          </p>
-          <p>Track Level</p>
-        </div>
-      </div>
-
-    </div>
-
-    {/* Progress Section */}
-    <div className="rounded-xl border p-6 bg-muted/30 space-y-3">
-
-      <div className="flex justify-between text-sm">
-        <span className="font-medium">Your Progress</span>
-        <span className="text-muted-foreground">
-          {progressPercentage}%
-        </span>
-      </div>
-
-      <Progress value={progressPercentage} />
-
-    </div>
-
-    {/* Lessons List */}
-    <div className="space-y-5">
-      {course.lessons.map((lesson, index) => {
-        const isCompleted = completedLessons.includes(lesson.id)
-
-        return (
-          <div
-            key={lesson.id}
-            className="flex justify-between items-center border rounded-xl px-6 py-5 hover:shadow-md transition-all duration-200"
+        {!enrolled && wallet.connected && (
+          <Button
+            onClick={handleEnroll}
+            disabled={enrollLoading}
+            size="sm"
+            className="mt-2"
           >
-            <div className="space-y-2">
+            {enrollLoading ? t("courses.enrolling") : t("courses.enroll")}
+          </Button>
+        )}
 
-              <p className="text-sm text-muted-foreground">
-                Lesson {index + 1}
-              </p>
-
-              <p className="font-semibold text-lg">
-                {lesson.title}
-              </p>
-
-              <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                <span>
-                  {lesson.type === "challenge"
-                    ? "🧪 Challenge"
-                    : "📖 Content"}
-                </span>
-
-                <span>•</span>
-
-                <span>{lesson.xpReward} XP</span>
-
-                {isCompleted && (
-                  <>
-                    <span>•</span>
-                    <span className="text-green-600 font-medium">
-                      Completed
-                    </span>
-                  </>
-                )}
-              </div>
-
-            </div>
-
-            <Link href={`/courses/${course.id}/lessons/${lesson.id}`}>
-              <Button
-                variant={isCompleted ? "outline" : "default"}
-              >
-                {isCompleted ? "Review" : "Start"}
-              </Button>
-            </Link>
+        <div className="flex gap-8 text-sm text-muted-foreground pt-4 border-t">
+          <div>
+            <p className="font-medium text-foreground">
+              {course.lessonCount}
+            </p>
+            <p>{t("courses.lessons")}</p>
           </div>
-        )
-      })}
-    </div>
 
-  </div>
-)
+          <div>
+            <p className="font-medium text-foreground">
+              {totalXP}
+            </p>
+            <p>{t("courses.totalXP")}</p>
+          </div>
+
+          <div>
+            <p className="font-medium text-foreground">
+              {course.trackLevel}
+            </p>
+            <p>{t("courses.trackLevel")}</p>
+          </div>
+        </div>
+
+      </div>
+
+      {/* PROGRESS */}
+      <div className="rounded-xl border p-4 bg-muted/30 space-y-2">
+        <div className="flex justify-between text-sm">
+          <span className="font-medium">{t("courses.progress")}</span>
+          <span className="text-muted-foreground">
+            {progressPercentage}%
+          </span>
+        </div>
+        <Progress value={progressPercentage} />
+      </div>
+
+      {/* LESSONS */}
+      {enrolled ? (
+        <div className="space-y-6">
+
+          <div className="space-y-4">
+            {course.lessons.map((lesson, index) => {
+              const isCompleted = completedLessons.includes(lesson.id)
+
+              return (
+                <div
+                  key={lesson.id}
+                  className="flex justify-between items-center border rounded-xl px-5 py-4 hover:shadow-sm transition-all duration-200"
+                >
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground">
+                      {t("courses.lesson")} {index + 1}
+                    </p>
+
+                    <p className="font-semibold">
+                      {lesson.title}
+                    </p>
+
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <span>
+                        {lesson.type === "challenge"
+                          ? `🧪 ${t("courses.challenge")}`
+                          : `📖 ${t("courses.content")}`}
+                      </span>
+
+                      <span>•</span>
+                      <span>{lesson.xpReward} XP</span>
+
+                      {isCompleted && (
+                        <>
+                          <span>•</span>
+                          <span className="text-green-600 font-medium">
+                            {t("courses.completed")}
+                          </span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+
+                  <Link href={`/courses/${course.id}/lessons/${lesson.id}`}>
+                    <Button
+                      size="sm"
+                      variant={isCompleted ? "outline" : "default"}
+                    >
+                      {isCompleted
+                        ? t("courses.reviewShort")
+                        : t("courses.startShort")}
+                    </Button>
+                  </Link>
+                </div>
+              )
+            })}
+          </div>
+
+          {progressPercentage === 100 && (
+            <div className="pt-4 border-t text-center space-y-3">
+              <p className="text-green-600 font-medium text-sm">
+                🎉 {t("courses.completedCourse")}
+              </p>
+
+              <div className="flex justify-center gap-3">
+                <Link href="/courses">
+                  <Button size="sm" variant="outline">
+                    {t("courses.backToCourses")}
+                  </Button>
+                </Link>
+
+                <Link href={`/certificates/${course.id}`}>
+                  <Button size="sm">
+                    {t("courses.viewCertificate")}
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          )}
+
+        </div>
+      ) : (
+        <div className="border rounded-xl p-5 text-center text-sm text-muted-foreground">
+          {t("courses.mustEnroll")}
+        </div>
+      )}
+
+    </div>
+  )
 }

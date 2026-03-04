@@ -15,7 +15,8 @@ import { mockCourses } from "@/domain/mockCourses"
 import { ILearningProgressService } from "./interfaces/ILearningProgressService";
 import type { CourseDefinition } from "@/domain/courses"
 import { deriveLevel } from "@/domain/level"
-
+import { AchievementService } from "./AchievementService"
+import { StreakService } from "./StreakService"
 
 /* -------------------------------------------------------------------------- */
 /*                                  Types                                     */
@@ -186,6 +187,42 @@ export class LearningProgressService implements ILearningProgressService {
 
     const currentXP = this.getLocalXP()
     this.setLocalXP(currentXP + lesson.xpReward)
+
+    const streakService = new StreakService()
+    streakService.updateStreak(this.wallet.publicKey)
+
+    const achievementService = new AchievementService()
+
+    // FIRST LESSON
+    achievementService.unlock(this.wallet.publicKey, "FIRST_LESSON")
+
+    // FIVE LESSONS
+    const allProgress = await this.getUserProgress()
+    const totalCompleted = allProgress.reduce(
+      (sum, c) => sum + c.completedLessons,
+      0
+    )
+
+    if (totalCompleted >= 5) {
+      achievementService.unlock(this.wallet.publicKey, "FIVE_LESSONS")
+    }
+
+    // FIRST COURSE COMPLETED
+    if (allProgress.some(c => c.isCompleted)) {
+      achievementService.unlock(this.wallet.publicKey, "FIRST_COURSE")
+    }
+
+    // XP 1000
+    const newXP = this.getLocalXP()
+    if (newXP >= 1000) {
+      achievementService.unlock(this.wallet.publicKey, "XP_1000")
+    }
+
+    // 7 DAY STREAK
+    const streak = streakService.getCurrentStreak(this.wallet.publicKey)
+    if (streak >= 7) {
+      achievementService.unlock(this.wallet.publicKey, "SEVEN_DAY_STREAK")
+    }
 
     return "local-stub-success"
   }

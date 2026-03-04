@@ -27,7 +27,7 @@ function CourseCard({ course, enrollment, onEnroll }: CourseCardProps) {
   const isCompleted = !!enrollment?.completedAt;
 
   return (
-    <Card className="w-full">
+    <Card className="w-full shadow-sm hover:shadow-md transition-shadow duration-200">
       <CardHeader>
         <div className="flex justify-between items-start">
           <div>

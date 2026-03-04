@@ -2,15 +2,17 @@
 
 import { useWallet } from "@solana/wallet-adapter-react";
 import { UserProfile } from "@/components/UserProfile";
+import { useLanguage } from "@/context/LanguageContext";
 
 export default function ProfilePage() {
   const { connected } = useWallet();
+  const { t } = useLanguage();
 
   if (!connected) {
     return (
-      <div className="container mx-auto px-4 py-12 text-center">
+      <div className="container mx-auto px-4 py-8 text-center">
         <h2 className="text-xl font-semibold mb-4">
-          Please connect your wallet to view your profile.
+          {t("profile.connectWallet")}
         </h2>
       </div>
     );
@@ -18,15 +20,19 @@ export default function ProfilePage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <main className="container mx-auto px-4 py-12">
+      <main className="container mx-auto px-4 py-8">
+
         <div className="mb-10">
-          <h1 className="text-3xl font-bold mb-2">My Profile</h1>
-          <p className="text-muted-foreground">
-            Track your XP, level progression, and course achievements.
+          <h1 className="text-2xl md:text-3xl font-semibold tracking-tight">
+            {t("profile.pageTitle")}
+          </h1>
+          <p className="text-muted-foreground text-sm md:text-base">
+            {t("profile.pageSubtitle")}
           </p>
         </div>
 
         <UserProfile />
+
       </main>
     </div>
   );

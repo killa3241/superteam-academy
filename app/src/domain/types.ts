@@ -14,7 +14,6 @@ export type LeaderboardPeriod = "weekly" | "monthly" | "all-time"
 export interface LeaderboardEntry {
   rank: number
   wallet: string
-  username: string
   xp: number
   level: number
 }
@@ -22,7 +21,6 @@ export interface LeaderboardEntry {
 export interface Certificate {
   id: string
   courseId: string
-  courseTitle: string
   recipientWallet: string
   issuedAt: string
   xpEarned: number

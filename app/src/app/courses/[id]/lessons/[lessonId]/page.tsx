@@ -7,19 +7,20 @@ import Link from "next/link"
 
 import type { CourseDefinition } from "@/domain/courses"
 import { useLearningProgressService } from "@/services/LearningProgressService"
-import { LessonBitmap } from "@/lib/utils/lesson-bitmap"
-
+import { trackEvent } from "@/lib/analytics"
 import { LessonLayout } from "@/components/lesson/LessonLayout"
 import { LessonContent } from "@/components/lesson/LessonContent"
 import { LessonEditor } from "@/components/lesson/LessonEditor"
 import { Button } from "@/components/ui/button"
 
 import { useXpAnimation } from "@/context/XpAnimationContext"
+import { useLanguage } from "@/context/LanguageContext"
+
 
 export default function LessonPage() {
   const params = useParams()
   const wallet = useWallet()
-
+  const { t } = useLanguage()
   const courseId = params?.id as string
   const lessonId = Number(params?.lessonId)
 
@@ -28,7 +29,7 @@ export default function LessonPage() {
   const [completed, setCompleted] = useState(false)
   const [loading, setLoading] = useState(false)
   const [challengePassed, setChallengePassed] = useState(false)
-
+  const { triggerXpAnimation } = useXpAnimation()
   const [course, setCourse] = useState<CourseDefinition | null>(null)
 
   useEffect(() => {
@@ -83,24 +84,24 @@ export default function LessonPage() {
   }, [wallet.publicKey, lessonIndex, courseId])
 
   if (!course) {
-  return <div className="p-8">Loading lesson...</div>
+  return <div className="p-8">{t("lesson.loading")}</div>
   }
 
   if (!lesson) {
-    return <div className="p-8">Lesson not found.</div>
+    return <div className="p-8">{t("lesson.notFound")}</div>
   }
+
   
-  const { triggerXpAnimation } = useXpAnimation()
   
   const handleComplete = async () => {
     if (completed) return
     if (!learningService) {
-        alert("Wallet not connected or service not ready.")
+        alert(t("lesson.walletError"))
         return
     }
 
     if (lesson.type === "challenge" && !challengePassed) {
-        alert("Please pass the challenge before completing the lesson.")
+        alert(t("lesson.passChallenge"))
         return
     }
 
@@ -110,13 +111,18 @@ export default function LessonPage() {
         await learningService.completeLesson(courseId, lessonIndex)
 
         setCompleted(true)
+        trackEvent("lesson_completed", {
+          course_id: courseId,
+          lesson_id: lesson.id,
+          lesson_index: lessonIndex,
+          xp_reward: lesson.xpReward,
+        })
 
-        
         triggerXpAnimation(lesson.xpReward)
 
     } catch (err) {
         console.error(err)
-        alert("Failed to complete lesson.")
+        alert(t("lesson.completeError"))
     } finally {
         setLoading(false)
     }
@@ -171,24 +177,40 @@ export default function LessonPage() {
     <div className="fixed bottom-0 left-0 right-0 border-t shadow-sm bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="max-w-6xl mx-auto px-6 py-4 flex justify-between items-center">
 
+        {/* Previous Button */}
         {previousLesson ? (
           <Button variant="outline" asChild>
             <Link href={`/courses/${courseId}/lessons/${previousLesson.id}`}>
-              ← Previous
+              ← {t("lesson.previous")}
             </Link>
           </Button>
         ) : (
           <div />
         )}
 
+        {/* Next OR Complete */}
         {nextLesson ? (
           <Button asChild>
             <Link href={`/courses/${courseId}/lessons/${nextLesson.id}`}>
-              Next →
+              {t("lesson.previous")} →
             </Link>
           </Button>
         ) : (
-          <div />
+          <div className="flex gap-4">
+
+            <Button variant="outline" asChild>
+              <Link href={`/courses/${courseId}`}>
+                {t("lesson.backToCourse")}
+              </Link>
+            </Button>
+
+            <Button asChild>
+              <Link href={`/certificates/${courseId}`}>
+                {t("lesson.completeCourse")}
+              </Link>
+            </Button>
+
+          </div>
         )}
 
       </div>
